@@ -8,19 +8,18 @@ import matplotlib.pyplot as plt
 # there is one bug we need to talk about. right now the algorithm craetes false bulges / lines 
 # when one set of points ends and a new one starts  (for example: when there are 2 different non connected lines,
 # when one line ends and the new line starts)
-#i talked with Dani and he tolda me to talk about it with you Vadim because maybe i dont need to fix this
+# i talked with Dani and he tolda me to talk about it with you Vadim because maybe i dont need to fix this
 # because of the way you perform the offset operation. 
 
 
-
 ######### dynamic threshold gains ######
-K_DISTANCE = 0.1
-K_HEADING = 0.1
+K_DISTANCE = 0.3
+K_HEADING = 0.3
 BULGE_THRESHOLD = 0.5
 ######################################
 
 ###### blocking points gain ####
-K_BLOCKING = 0.2
+K_BLOCKING = 0.3  #TODO need to improve - add dynamic calculations (doesnt work well for small bulges - need higher)
 ###############################
 
 
@@ -346,42 +345,41 @@ class PathAnalyzer:
 
 ##################################################### pre proccessing functions ##############################################
     
-    def if_blocking_append(self, current_point, previous_point):
-        """
-        Check if either the current point or the previous point is a blocking point based on relative differences.
-        A point is considered blocking if the relative difference between the delta distances exceeds K_BLOCKING.
-        
-        Blocking points cannot be part of a bulge (except at the start of the bulge).
-        """
-        if previous_point is not None:
-            # Calculate the maximum of the two delta distances to use as the denominator for relative difference
-            max_delta_distance = max(current_point.delta_distance, previous_point.delta_distance)
-            
-            # Avoid division by zero
-            if max_delta_distance == 0:
-                # print(f"Both points have zero delta distance. No blocking point detected.")
-                return
-            
-            # Calculate the relative difference in percentage
-            relative_difference = abs(current_point.delta_distance - previous_point.delta_distance) / max_delta_distance
-            
-            # Debug print to show delta distances and relative difference
-            # print(f"Previous Point Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
-            # print(f"Current Point Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
-            # print(f"Relative Difference: {relative_difference}, Blocking Threshold: {K_BLOCKING}")
+def if_blocking_append(self, current_point, previous_point):
+    """
+    Check if either the current point or the previous point is a blocking point based on dynamically adjusted relative differences.
+    A point is considered blocking if the relative difference between the delta distances exceeds the dynamically adjusted K_BLOCKING.
+    """
+    if previous_point is not None:
+        # Calculate the maximum of the two delta distances to use as the denominator for relative difference
+        max_delta_distance = max(current_point.delta_distance, previous_point.delta_distance)
 
-            # Check if the relative difference exceeds the blocking threshold
-            if relative_difference > K_BLOCKING:
-                # Append the point with the larger delta distance to the blocking points list
-                if current_point.delta_distance > previous_point.delta_distance:
-                    self.blocking_points.append(current_point)
-                    # print(f"Blocking point detected at Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
-                else:
-                    self.blocking_points.append(previous_point)
-                    # print(f"Blocking point detected at Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
-            # else:
-                # Debug print to indicate that neither point is blocking
-                # print(f"No blocking point detected between Index {previous_point.index} and {current_point.index}.")
+        # Avoid division by zero
+        if max_delta_distance == 0:
+            return
+
+        # Dynamically adjust K_BLOCKING based on the size of the delta distances
+        # For small delta distances, increase the threshold; for larger ones, use normal or reduced threshold
+        delta_factor = np.sqrt(max_delta_distance)  # Adjust the scaling as needed; sqrt is just one possible example
+        adjusted_K_BLOCKING = K_BLOCKING / delta_factor if delta_factor > 1 else K_BLOCKING * (1 / delta_factor)
+
+        # Calculate the relative difference in percentage
+        relative_difference = abs(current_point.delta_distance - previous_point.delta_distance) / max_delta_distance
+
+        # Debug print to show delta distances, relative difference, and the dynamically adjusted threshold
+        print(f"Previous Point Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
+        print(f"Current Point Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
+        print(f"Relative Difference: {relative_difference}, Adjusted Blocking Threshold: {adjusted_K_BLOCKING}")
+
+        # Check if the relative difference exceeds the dynamically adjusted blocking threshold
+        if relative_difference > adjusted_K_BLOCKING:
+            # Append the point with the larger delta distance to the blocking points list
+            if current_point.delta_distance > previous_point.delta_distance:
+                self.blocking_points.append(current_point)
+                print(f"Blocking point detected at Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
+            else:
+                self.blocking_points.append(previous_point)
+                print(f"Blocking point detected at Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
 
         
 
@@ -688,8 +686,8 @@ class PathAnalyzer:
         
         
 # Example usage:
-# csv_file = '/home/bennyciv/git/python_tools/offset_mission/offset_test_ofek_code.csv'
-csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\super_duper_offset.csv'
+# csv_file = '/home/bennyciv/git/python_tools/offset_mission/offset_test_ofek_code.csv' "C:\Users\benny\OneDrive\Desktop\smooth_offset_for_offseting_again.csv"
+csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\the_second_offset.csv'
 output_csv_file = "C:\\Users\\benny\\OneDrive\\Desktop\\code\\corrected_1.csv"
 
 
