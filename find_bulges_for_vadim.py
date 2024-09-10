@@ -36,14 +36,20 @@ class Point:
         self.delta_distance = delta_distance
         self.bulge = bulge
 
-    def to_dict(self):
+    def to_coordinates_metadata_dict(self):
         return {
-            'bulge': self.bulge,
-            'delta_distance': self.delta_distance,
-            'delta_heading': self.delta_heading,
-            'easting': self.easting,
-            'index': self.index,
-            'northing': self.northing
+            'coordinates': {
+                'latitude': self.northing,
+                'longitude': self.easting,
+                'altitude': getattr(self, 'elevation', None),
+            },
+            'metadata': {
+                'name': getattr(self, 'name', None),
+                'marking_type': getattr(self, 'type', None),
+                'interval': getattr(self, 'interval', None),
+                'dash_length': getattr(self, 'length', None),
+                'bulge': self.bulge,
+            }
         }
 
     def __str__(self):
@@ -744,7 +750,7 @@ def find_bulges(csv_file, output_csv_file):
     # Save the optimized bulges to the CSV file
     analyzer.generate_csv_from_points()
 
-    return [point.to_dict() for point in analyzer.processed_points]
+    return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
 
 
 if __name__ == "__main__":
