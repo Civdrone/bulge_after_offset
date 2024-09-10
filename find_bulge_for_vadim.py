@@ -8,19 +8,18 @@ import matplotlib.pyplot as plt
 # there is one bug we need to talk about. right now the algorithm craetes false bulges / lines 
 # when one set of points ends and a new one starts  (for example: when there are 2 different non connected lines,
 # when one line ends and the new line starts)
-#i talked with Dani and he tolda me to talk about it with you Vadim because maybe i dont need to fix this
+# i talked with Dani and he tolda me to talk about it with you Vadim because maybe i dont need to fix this
 # because of the way you perform the offset operation. 
 
 
-
 ######### dynamic threshold gains ######
-K_DISTANCE = 0.01
-K_HEADING = 0.2
-BULGE_THRESHOLD = 0.025
+K_DISTANCE = 0.3  # shorter distances causes higher errors in delta distance attribute. this gain increases the error tolerance when the delta distance decreases
+K_HEADING = 0.3  # shorer distances causes higher delta heading errors. this gain increases the error tolerance when the delta heading increases
+BULGE_THRESHOLD = 0.5  # the base gain per point. defines the overall error profile between points.
 ######################################
 
 ###### blocking points gain ####
-K_BLOCKING = 5.0
+K_BLOCKING = 0.3  #TODO need to improve - add dynamic calculations (doesnt work well for small bulges - need higher) - the dynamic SQRT did not produce good results. need to perform tests in order to find the delta distance change profile based on the delta distances.
 ###############################
 
 
@@ -54,8 +53,6 @@ class PathAnalyzer:
         self.bulge_end_index = -1  # To store the end index of the last detected bulge (in order to skip mid bulge points thus reducing complexity in the code)
         self.bulge_errors = []  # To store the errors for each bulge
         self.blocking_points = []  # To store points that are blocking due to delta distance condition
-
-
 
   ################################################# math functions ###################################################
 
@@ -108,6 +105,7 @@ class PathAnalyzer:
 
         # Use polar coordinates to find the center coordinates
         center_x, center_y = self.polar((start_x, start_y), adjusted_angle, adjusted_radius)
+        
         
         return np.array([center_x, center_y])
 
@@ -174,7 +172,7 @@ class PathAnalyzer:
     
     def create_interpolated_point(self, point1, point2):
         """Create a new interpolated point between two given points - in case the number of points forming the circle is pair (no middle point)."""
-        print("creating new middle point")
+        # print("creating new middle point")
         new_index = (point1.index + point2.index) / 2  # New index between the two points
         new_northing = (point1.northing + point2.northing) / 2
         new_easting = (point1.easting + point2.easting) / 2
@@ -227,10 +225,8 @@ class PathAnalyzer:
     
     def calculate_bulge(self, start_index, middle_index, end_index):
         """Calculate the bulge based on the start, middle, and end indices.
-        not the best function. i use 2 different aprroaches because it gave me the best results.
-        the first approach calculates the bulge value best, the second approach calculates the direction (1 or -1) best
-        so i merged both of them."""
-        
+        Limit the bulge values to the range -1 to 1.
+        """
         
         start_point = self.points[start_index]
         middle_point = self.points[middle_index]
@@ -268,21 +264,23 @@ class PathAnalyzer:
         direction_bulge = np.tan(theta / 4)
 
         # Determine the direction of the bulge
-        cross_product_z = np.cross(
-            [middle_point.easting - start_point.easting, middle_point.northing - start_point.northing],
-            [end_point.easting - start_point.easting, end_point.northing - start_point.northing]
-        )
+        cross_product_z = np.cross([middle_point.easting - start_point.easting, middle_point.northing - start_point.northing],
+                                [end_point.easting - start_point.easting, end_point.northing - start_point.northing])
 
         if cross_product_z < 0:
             bulge = -abs(bulge)
         else:
             bulge = abs(bulge)
 
+        # Clip the bulge to the range -1 to 1
+        bulge = np.clip(bulge, -1.0, 1.0)
+
         # Set the bulge value in the corresponding points
         self.points[start_index].bulge = bulge
         self.points[end_index].bulge = 0
 
         return bulge
+
     
     
     def normalize_segments(self, start_index, num_points):
@@ -347,21 +345,48 @@ class PathAnalyzer:
     
     def if_blocking_append(self, current_point, previous_point):
         """
-        Check if the current point is a blocking point. 
-        If the delta distance between the current point and the previous point is significantly large, 
-        we consider it a blocking point.
-
-        Blocking points cannot be part of a bulge (except at the start of the bulge).
+        Check if either the current point or the previous point is a blocking point based on dynamically adjusted relative differences.
+        A point is considered blocking if the relative difference between the delta distances exceeds the dynamically adjusted K_BLOCKING.
         """
         if previous_point is not None:
-            # Calculate the blocking threshold
-            blocking_threshold = previous_point.delta_distance * K_BLOCKING
-            
-            # Check if the current point exceeds the blocking threshold
-            if current_point.delta_distance > blocking_threshold:
-                self.blocking_points.append(current_point)
+            # Calculate the maximum of the two delta distances to use as the denominator for relative difference
+            max_delta_distance = max(current_point.delta_distance, previous_point.delta_distance)
+
+            # Avoid division by zero
+            if max_delta_distance == 0:
+                return
+
+            # Calculate the relative difference in percentage
+            relative_difference = abs(current_point.delta_distance - previous_point.delta_distance) / max_delta_distance
+
+            # Debug print to show delta distances, relative difference, and the dynamically adjusted threshold
+            # print(f"Previous Point Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
+            # print(f"Current Point Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
+
+            # Check if the relative difference exceeds the dynamically adjusted blocking threshold
+            if relative_difference > K_BLOCKING:
+                # Append the point with the larger delta distance to the blocking points list
+                if current_point.delta_distance > previous_point.delta_distance:
+                    self.blocking_points.append(current_point)
+                    print(f"Blocking point detected at Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
+                else:
+                    self.blocking_points.append(previous_point)
+                    print(f"Blocking point detected at Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
+
+        
+
+
+    def check_mismatched_start_stop(self, current_start, previous_stop):
+        """
+        Check if the previous point is a stop point (Type == 3) and the current point is a start point (Type == 2) at different coordinates.
+        If the coordinates differ, append the current start point to the blocking points list.
+        """
+        if previous_stop is not None and self.data.iloc[previous_stop.index]['Type'] == 3:
+            # Check if the coordinates of the start point differ from the stop point
+            if current_start.northing != previous_stop.northing or current_start.easting != previous_stop.easting:
+                self.blocking_points.append(current_start)
                 # Optionally print debug information
-                # print(f"Blocking point detected at index {current_point.index}, Delta Distance: {current_point.delta_distance}")
+                print(f"Mismatched start point at index {current_start.index}, added to blocking points")
 
 
     def analyze_last_point(self):
@@ -378,6 +403,7 @@ class PathAnalyzer:
         """Prepare data for processing: Calculate delta heading and delta distance for each start point."""
         previous_heading = None  # The first point has no prior point to compare
         previous_point = None  # To store the previous point for distance comparison
+        previous_stop_point = None  # To store the previous stop point to check for mismatched start/stop points
 
         for i in range(len(self.data) - 1):
             if self.data.iloc[i]['Type'] == 2:  # We process only the start points
@@ -397,9 +423,16 @@ class PathAnalyzer:
                 self.if_blocking_append(current_point, previous_point)
 
                 previous_point = current_point  # Store the current point for the next comparison
+                
+                # Check for mismatched start and stop points and append to blocking points
+                self.check_mismatched_start_stop(current_point, previous_stop_point)
 
                 # append the point with all the required data in the same order as the CSV file
                 self.points.append(current_point)
+                
+            elif self.data.iloc[i]['Type'] == 3:
+                # Update the previous stop point for the next iteration
+                previous_stop_point = Point(index=i, northing=self.data.iloc[i]['Northing'], easting=self.data.iloc[i]['Easting'])
 
         # a special case. generally we take into account only the start points and ignore the stop points. 
         # at the final stop point there will not be also a start point so we also add the final stop point to our points list
@@ -437,21 +470,21 @@ class PathAnalyzer:
             threshold = self.calculate_dynamic_threshold(start_index, end_index)  # Calculate the threshold to determine if the points are a bulge.
 
             # Debugging output to trace the process
-            print(f"Checking potential curve from index {start_index} to {end_index}...")
-            print(f"Total sum: {total_sum:.6f}, Threshold: {threshold:.6f}")
+            # print(f"Checking potential curve from index {start_index} to {end_index}...")
+            # print(f"Total sum: {total_sum:.6f}, Threshold: {threshold:.6f}")
 
             if self.is_below_threshold(total_sum, threshold):  # Checking if bulge conditions are met
-                print(f"Extending curve at index {end_index}...")
+                # print(f"Extending curve at index {end_index}...")
 
                 if self.points[end_index] in self.blocking_points:  # Stop extending the curve if a blocking point is reached.
-                    print(f"Reached blocking point at index {end_index}. Stopping curve detection.")
+                    # print(f"Reached blocking point at index {end_index}. Stopping curve detection.")
                     break
 
                 index_counter += 1
                 max_curve_found = True
 
             else:  # The curve conditions are not met anymore
-                print(f"Stopping extension at index {end_index}, total sum {total_sum} exceeds threshold {threshold}")
+                # print(f"Stopping extension at index {end_index}, total sum {total_sum} exceeds threshold {threshold}")
                 break
 
         # If a valid curve was found, process the curve
@@ -496,7 +529,7 @@ class PathAnalyzer:
         
         if curve_info:
             start_index, end_index, bulge_value = curve_info
-            print(f"Bulge detected from {start_index} to {end_index} with bulge value {bulge_value:.6f}")
+            # print(f"Bulge detected from {start_index} to {end_index} with bulge value {bulge_value:.6f}")
             self.processed_points.append(self.points[start_index]) 
             self.processed_points.append(self.points[end_index])
             self.bulge_end_index = end_index
@@ -518,7 +551,7 @@ class PathAnalyzer:
 
         while start_index < final_index:
             if start_index <= self.bulge_end_index:  # Skip points already part of a detected bulge - in order to decrease complexity
-                print(f"Skipping point at index {start_index} because it's already part of a detected bulge.")
+                # print(f"Skipping point at index {start_index} because it's already part of a detected bulge.")
                 start_index = self.bulge_end_index - 1
                 continue
 
@@ -645,9 +678,10 @@ class PathAnalyzer:
         
         
 # Example usage:
-# csv_file = '/home/bennyciv/git/python_tools/offset_mission/offset_test_ofek_code.csv'
-csv_file = '/home/bennyciv/git/python_tools/offset_mission/the_ultimate_offset_test.csv'
-output_csv_file = '/home/bennyciv/git/python_tools/offset_mission/corrected_1.csv'
+# csv_file = '/home/bennyciv/git/python_tools/offset_mission/offset_test_ofek_code.csv' "C:\Users\benny\OneDrive\Desktop\smooth_offset_for_offseting_again.csv"
+csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\temp_input_find_bulges.csv'
+output_csv_file = "C:\\Users\\benny\\OneDrive\\Desktop\\code\\corrected_1.csv"
+
 
 
 analyzer = PathAnalyzer(csv_file, output_csv_file)
