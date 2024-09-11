@@ -20,37 +20,43 @@ K_HEADING = 0.3
 BULGE_THRESHOLD = 0.5
 ######################################
 
-###### blocking points gain ####
-# TODO need to improve - add dynamic calculations (doesnt work well for small bulges - need higher)
+###### blocking points gain #####
 K_BLOCKING = 0.3
 ###############################
 
 
 class Point:
     # a class to store the all points data for proccesing.
-    def __init__(self, index=0, northing=0, easting=0, delta_heading=0, delta_distance=0, bulge=0):
+    def __init__(self, index=0, northing=0, easting=0, elevation = 0 ,type = 0 , interval = 0 , length = 0 , delta_heading=0, delta_distance=0, bulge=0, name = ""):
         self.index = index
         self.northing = northing
         self.easting = easting
+        self.elevation = elevation
+        self.type = type
+        self.interval = interval
+        self.length = length
+        self.bulge = bulge
+        self.name = name
         self.delta_heading = delta_heading
         self.delta_distance = delta_distance
-        self.bulge = bulge
+
 
     def to_coordinates_metadata_dict(self):
         return {
             'coordinates': {
-                'latitude': self.northing,
-                'longitude': self.easting,
-                'altitude': getattr(self, 'elevation', None),
+                'latitude': float(self.northing),
+                'longitude': float(self.easting),
+                'altitude': float(self.elevation),
             },
             'metadata': {
-                'name': getattr(self, 'name', None),
-                'marking_type': getattr(self, 'type', None),
-                'interval': getattr(self, 'interval', None),
-                'dash_length': getattr(self, 'length', None),
-                'bulge': self.bulge,
+                'name': str(self.name),
+                'marking_type': int(self.type),
+                'interval': float(self.interval),
+                'dash_length': float(self.length),
+                'bulge': float(self.bulge),
             }
         }
+
 
     def __str__(self):
         """Return a string representation of the Point for easy reading."""
@@ -366,35 +372,23 @@ class PathAnalyzer:
         """
         if previous_point is not None:
             # Calculate the maximum of the two delta distances to use as the denominator for relative difference
-            max_delta_distance = max(
-                current_point.delta_distance, previous_point.delta_distance)
+            max_delta_distance = max(current_point.delta_distance, previous_point.delta_distance)
 
             # Avoid division by zero
             if max_delta_distance == 0:
                 return
 
-            # Dynamically adjust K_BLOCKING based on the size of the delta distances
-            # For small delta distances, increase the threshold; for larger ones, use normal or reduced threshold
-            # Adjust the scaling as needed; sqrt is just one possible example
-            delta_factor = np.sqrt(max_delta_distance)
-            adjusted_K_BLOCKING = K_BLOCKING / \
-                delta_factor if delta_factor > 1 else K_BLOCKING * \
-                (1 / delta_factor)
+
 
             # Calculate the relative difference in percentage
-            relative_difference = abs(
-                current_point.delta_distance - previous_point.delta_distance) / max_delta_distance
+            relative_difference = abs(current_point.delta_distance - previous_point.delta_distance) / max_delta_distance
 
             # Debug print to show delta distances, relative difference, and the dynamically adjusted threshold
-            print(
-                f"Previous Point Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
-            print(
-                f"Current Point Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
-            print(
-                f"Relative Difference: {relative_difference}, Adjusted Blocking Threshold: {adjusted_K_BLOCKING}")
+            # print(f"Previous Point Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
+            # print(f"Current Point Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
 
             # Check if the relative difference exceeds the dynamically adjusted blocking threshold
-            if relative_difference > adjusted_K_BLOCKING:
+            if relative_difference > K_BLOCKING:
                 # Append the point with the larger delta distance to the blocking points list
                 if current_point.delta_distance > previous_point.delta_distance:
                     self.blocking_points.append(current_point)
@@ -420,8 +414,18 @@ class PathAnalyzer:
 
     def analyze_last_point(self):
         if self.data.iloc[-1]['Type'] == 3:
-            final_point = Point(index=len(
-                self.data) - 1, northing=self.data.iloc[-1]['Northing'], easting=self.data.iloc[-1]['Easting'])
+            final_point = Point(
+            index=len(self.data) - 1, 
+            northing=self.data.iloc[-1]['Northing'], 
+            easting=self.data.iloc[-1]['Easting'], 
+            elevation=self.data.iloc[-1]['Elevation'], 
+            type=self.data.iloc[-1]['Type'], 
+            interval=self.data.iloc[-1]['Interval'], 
+            length=self.data.iloc[-1]['Length'], 
+            bulge=self.data.iloc[-1]['Bulge'], 
+            name=self.data.iloc[-1]['Name']
+            )
+
             # Set final point deltas to 0 since it's a stop point
             final_point.delta_distance = 0
             final_point.delta_heading = 0
@@ -440,13 +444,31 @@ class PathAnalyzer:
 
                 # Insert data from the CSV into the Point object:
                 current_point = Point(
-                    index=i, northing=self.data.iloc[i]['Northing'], easting=self.data.iloc[i]['Easting'])
-                next_point = Point(
-                    index=i + 1, northing=self.data.iloc[i + 1]['Northing'], easting=self.data.iloc[i + 1]['Easting'])
+                    index=i, 
+                    northing=self.data.iloc[i]['Northing'], 
+                    easting=self.data.iloc[i]['Easting'], 
+                    elevation=self.data.iloc[i]['Elevation'], 
+                    type=self.data.iloc[i]['Type'], 
+                    interval=self.data.iloc[i]['Interval'], 
+                    length=self.data.iloc[i]['Length'], 
+                    bulge=self.data.iloc[i]['Bulge'], 
+                    name=self.data.iloc[i]['Name']
+                )
 
+                next_point = Point(
+                    index=i + 1, 
+                    northing=self.data.iloc[i + 1]['Northing'], 
+                    easting=self.data.iloc[i + 1]['Easting'], 
+                    elevation=self.data.iloc[i + 1]['Elevation'], 
+                    type=self.data.iloc[i + 1]['Type'], 
+                    interval=self.data.iloc[i + 1]['Interval'], 
+                    length=self.data.iloc[i + 1]['Length'], 
+                    bulge=self.data.iloc[i + 1]['Bulge'], 
+                    name=self.data.iloc[i + 1]['Name']
+                )
+                
                 # Calculate the Euclidean distance between these points
-                current_point.delta_distance = self.calculate_delta_distance(
-                    current_point, next_point)
+                current_point.delta_distance = self.calculate_delta_distance(current_point, next_point)
 
                 # Calculate the delta heading between current and next points
                 current_point.delta_heading = self.calculate_delta_heading(
@@ -537,6 +559,7 @@ class PathAnalyzer:
         else:
             return None
 
+
     def process_curve_found(self, start_index, end_index, final_index):
         """Process the curve found by extending the indices and calculating the bulge.
         this function returns the final start index , end index, and bulge of the curve"""
@@ -565,6 +588,7 @@ class PathAnalyzer:
 
         return start_index, end_index, bulge_value
 
+
     def process_point(self, start_index):
         """Process a single point or curve and update the processed points list."""
         # print(f"Processing point at index {start_index}...")  # Debugging output
@@ -577,12 +601,13 @@ class PathAnalyzer:
             self.processed_points.append(self.points[end_index])
             self.bulge_end_index = end_index
             # Skip all the points between the start and stop bulge points.
-            return end_index + 1
+            return end_index
 
         else:
             # print(f"No bulge detected at {start_index}. Moving to the next point.")
             self.processed_points.append(self.points[start_index])
             return start_index + 1  # no bulge is found from this point, moving the the point after it
+
 
     def iterate_and_normalize_all_segments(self):
         """this is the main function. goes through all the points in the list of proccesed points and detects curves
@@ -760,6 +785,8 @@ if __name__ == "__main__":
         root_dir = os.path.dirname(os.path.abspath(__file__))
 
         input_csv_file = sys.argv[PATH_INPUT]
+        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\temp_input_find_bulges.csv'
+
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
         points_data = find_bulges(input_csv_file, output_csv_file)

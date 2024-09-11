@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\the_second_offset.csv'
-output_csv_file = "C:\\Users\\benny\\OneDrive\\Desktop\\code\\corrected_1.csv"
+csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\temp_input_find_bulges.csv'
+output_csv_file = "C:\\Users\\benny\\OneDrive\\Desktop\\code\\output.csv"
 
 
 # Reading the first CSV file
