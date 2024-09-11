@@ -601,7 +601,7 @@ class PathAnalyzer:
             self.processed_points.append(self.points[end_index])
             self.bulge_end_index = end_index
             # Skip all the points between the start and stop bulge points.
-            return end_index
+            return end_index + 1
 
         else:
             # print(f"No bulge detected at {start_index}. Moving to the next point.")
@@ -625,6 +625,51 @@ class PathAnalyzer:
 
             # Check if the current index is the start of a bulge
             start_index = self.process_point(start_index)
+            
+        self.final_comprasion_input_output()
+            
+    def final_comprasion_input_output(self):
+        """
+        Perform a final comparison between the `points` list (original data) and the `processed_points` list
+        (processed data). Ensure no points are skipped or missing in the `processed_points` list.
+        """
+        # Compare the first point in processed_points and points
+        first_processed_point = self.processed_points[0]
+
+        # Search for the first processed point in the points list
+        found_first_index = None
+        for i, point in enumerate(self.points):
+            if (point.northing == first_processed_point.northing and
+                point.easting == first_processed_point.easting):
+                found_first_index = i
+                break
+
+        if found_first_index is not None and found_first_index > 0:
+            # Add all points with lower index than the found first index from original points to processed points
+            for i in range(0, found_first_index):
+                self.processed_points.insert(i, self.points[i])
+            # print(f"Copied missing points before index {found_first_index} to processed_points.")
+        
+        # Compare the last point in processed_points and points
+        last_processed_point = self.processed_points[-1]
+
+        # Search for the last processed point in the points list
+        found_last_index = None
+        for i, point in enumerate(self.points):
+            if (point.northing == last_processed_point.northing and
+                point.easting == last_processed_point.easting):
+                found_last_index = i
+                break
+
+        if found_last_index is not None:
+            # Add all points with higher index than the found last index from original points to processed points
+            for i in range(found_last_index + 1, len(self.points)):
+                self.processed_points.append(self.points[i])
+            # print(f"Copied missing points after index {found_last_index} to processed_points.")
+        
+        # Debug print to confirm all points have been processed
+        # print(f"Final check complete. Total points processed: {len(self.processed_points)}")
+
 
     def optimize_bulge(self, start_index, middle_index, end_index):
         """because it looks like the offset operation is not very accurate, we start by computing the initial bulge
