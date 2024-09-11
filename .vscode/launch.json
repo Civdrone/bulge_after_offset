@@ -6,10 +6,7 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/find_bulges_for_vadim.py",
-      "args": [
-        "${workspaceFolder}/the_ultimate_offset_test.csv",
-        "${workspaceFolder}/output.csv"
-      ],
+      "args": ["${workspaceFolder}/input.csv", "${workspaceFolder}/output.csv"],
       "console": "integratedTerminal"
     }
   ]
