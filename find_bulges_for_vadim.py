@@ -423,7 +423,7 @@ class PathAnalyzer:
             interval=self.data.iloc[-1]['Interval'], 
             length=self.data.iloc[-1]['Length'], 
             bulge=self.data.iloc[-1]['Bulge'], 
-            name=self.data.iloc[-1]['Name']
+            name=self.data.iloc[-1]['Name'].split('__')[0]
             )
 
             # Set final point deltas to 0 since it's a stop point
@@ -452,7 +452,7 @@ class PathAnalyzer:
                     interval=self.data.iloc[i]['Interval'], 
                     length=self.data.iloc[i]['Length'], 
                     bulge=self.data.iloc[i]['Bulge'], 
-                    name=self.data.iloc[i]['Name']
+                    name=self.data.iloc[i]['Name'].split('__')[0]
                 )
 
                 next_point = Point(
@@ -627,6 +627,7 @@ class PathAnalyzer:
             start_index = self.process_point(start_index)
             
         self.final_comprasion_input_output()
+        self.adding_stop_points_to_list()
             
     def final_comprasion_input_output(self):
         """
@@ -669,6 +670,50 @@ class PathAnalyzer:
         
         # Debug print to confirm all points have been processed
         # print(f"Final check complete. Total points processed: {len(self.processed_points)}")
+        
+    def adding_stop_points_to_list(self):
+        new_processed_points = []  # creating a new list to store the new data including stop points
+        index_counter = 1  # re indexing the list 
+
+        for i in range(len(self.processed_points) - 1):
+            point = self.processed_points[i]
+            next_point = self.processed_points[i + 1]
+
+            # Rebuild the name for the start point
+            point_name = f"{point.name}__{index_counter}_start"
+            if point.bulge != 0:
+                point_name += "_bulge"
+            
+            point.index = index_counter
+            point.name = point_name
+
+            
+            new_processed_points.append(point)
+
+            if point.type == 2:  # If it's a start point
+                # Create a new stop point based on the next start point
+                stop_point = Point(
+                    index=index_counter,  # Use the same index as the start point
+                    northing=next_point.northing,
+                    easting=next_point.easting,
+                    elevation=next_point.elevation,
+                    type=3,  # Set as stop point
+                    interval=next_point.interval,
+                    length=next_point.length,
+                    bulge=0.0,  # Stop points have zero bulge
+                    name=f"{point.name.split('__')[0]}__{index_counter}_stop"
+                )
+
+                new_processed_points.append(stop_point)
+
+                index_counter += 1
+
+        self.processed_points = new_processed_points
+
+
+
+
+                
 
 
     def optimize_bulge(self, start_index, middle_index, end_index):
@@ -830,7 +875,7 @@ if __name__ == "__main__":
         root_dir = os.path.dirname(os.path.abspath(__file__))
 
         input_csv_file = sys.argv[PATH_INPUT]
-        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\temp_input_find_bulges.csv'
+        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
