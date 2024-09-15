@@ -24,6 +24,10 @@ BULGE_THRESHOLD = 0.5
 K_BLOCKING = 0.3
 ###############################
 
+##### minimum bulge value ###########
+MIN_BULGE = 1e-5
+###################################
+
 
 class Point:
     # a class to store the all points data for proccesing.
@@ -300,6 +304,10 @@ class PathAnalyzer:
 
         # Clip the bulge to the range -1 to 1
         bulge = np.clip(bulge, -1.0, 1.0)
+        
+        #zero for smaller than threshold bulge
+        if abs(bulge) <= MIN_BULGE:
+            bulge = 0
 
         # Set the bulge value in the corresponding points
         self.points[start_index].bulge = bulge
@@ -874,8 +882,8 @@ if __name__ == "__main__":
     try:
         root_dir = os.path.dirname(os.path.abspath(__file__))
 
-        input_csv_file = sys.argv[PATH_INPUT]
-        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        # input_csv_file = sys.argv[PATH_INPUT]
+        input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
