@@ -1,0 +1,226 @@
+[{"coordinates": {"latitude": 10436.64770027, "longitude": 10375.11690412, "altitude": 0.0}, "metadata": {"name": "0f14f1__1_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10436.62759629, "longitude": 10356.90904765, "altitude": 0.0}, "metadata": {"name": "0f14f1__1_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10436.62759629, "longitude": 10356.90904765, "altitude": 0.0}, "metadata": {"name": "0f14f1__2_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10620.39340244, "longitude": 10356.67987888, "altitude": 0.0}, "metadata": {"name": "0f14f1__2_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10620.39340244, "longitude": 10356.67987888, "altitude": 0.0}, "metadata": {"name": "0f14f1__3_start_bulge", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": -0.36919319479560553}}, {"coordinates": {"latitude": 10641.99608909, "longitude": 10375.09385629, "altitude": 0.0}, "metadata": {"name": "0f14f1__3_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10641.99608909, "longitude": 10375.09385629, "altitude": 0.0}, "metadata": {"name": "0f14f1__4_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.20388772, "longitude": 10376.80276786, "altitude": 0.0}, "metadata": {"name": "0f14f1__4_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.20388772, "longitude": 10376.80276786, "altitude": 0.0}, "metadata": {"name": "0f14f1__5_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.27309917, "longitude": 10378.39883396, "altitude": 0.0}, "metadata": {"name": "0f14f1__5_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.27309917, "longitude": 10378.39883396, "altitude": 0.0}, "metadata": {"name": "0f14f1__6_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.27766277, "longitude": 10378.4196267, "altitude": 0.0}, "metadata": {"name": "0f14f1__6_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.27766277, "longitude": 10378.4196267, "altitude": 0.0}, "metadata": {"name": "0f14f1__7_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.38856115, "longitude": 10466.27545564, "altitude": 0.0}, "metadata": {"name": "0f14f1__7_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10642.38856115, "longitude": 10466.27545564, "altitude": 0.0}, "metadata": {"name": "0f14f1__8_start", "marking_type": 2, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}, {"coordinates": {"latitude": 10624.17964319, "longitude": 10466.2980992, "altitude": 0.0}, "metadata": {"name": "0f14f1__8_stop", "marking_type": 3, "interval": 0.0, "dash_length": 0.0, "bulge": 0.0}}][
+    {
+        "coordinates": {
+            "latitude": 10436.64770027,
+            "longitude": 10375.11690412,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__1_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10436.62759629,
+            "longitude": 10356.90904765,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__1_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10436.62759629,
+            "longitude": 10356.90904765,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__2_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10620.39340244,
+            "longitude": 10356.67987888,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__2_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10620.39340244,
+            "longitude": 10356.67987888,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__3_start_bulge",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": -0.36919319479560553
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10641.99608909,
+            "longitude": 10375.09385629,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__3_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10641.99608909,
+            "longitude": 10375.09385629,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__4_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.20388772,
+            "longitude": 10376.80276786,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__4_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.20388772,
+            "longitude": 10376.80276786,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__5_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.27309917,
+            "longitude": 10378.39883396,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__5_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.27309917,
+            "longitude": 10378.39883396,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__6_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.27766277,
+            "longitude": 10378.4196267,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__6_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.27766277,
+            "longitude": 10378.4196267,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__7_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.38856115,
+            "longitude": 10466.27545564,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__7_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10642.38856115,
+            "longitude": 10466.27545564,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__8_start",
+            "marking_type": 2,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    },
+    {
+        "coordinates": {
+            "latitude": 10624.17964319,
+            "longitude": 10466.2980992,
+            "altitude": 0.0
+        },
+        "metadata": {
+            "name": "0f14f1__8_stop",
+            "marking_type": 3,
+            "interval": 0.0,
+            "dash_length": 0.0,
+            "bulge": 0.0
+        }
+    }
+]
