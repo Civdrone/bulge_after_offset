@@ -696,9 +696,11 @@ class PathAnalyzer:
             point.name = point_name
 
             
-            new_processed_points.append(point)
+            
 
             if point.type == 2:  # If it's a start point
+                
+                new_processed_points.append(point)
                 # Create a new stop point based on the next start point
                 stop_point = Point(
                     index=index_counter,  # Use the same index as the start point
@@ -882,8 +884,8 @@ if __name__ == "__main__":
     try:
         root_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # input_csv_file = sys.argv[PATH_INPUT]
-        input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        input_csv_file = sys.argv[PATH_INPUT]
+        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
