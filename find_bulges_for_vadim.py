@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 # TODO IMPORTANT!!
@@ -304,7 +304,7 @@ class PathAnalyzer:
 
         # Clip the bulge to the range -1 to 1
         bulge = np.clip(bulge, -1.0, 1.0)
-        
+
         #zero for smaller than threshold bulge
         if abs(bulge) <= MIN_BULGE:
             bulge = 0
@@ -400,12 +400,12 @@ class PathAnalyzer:
                 # Append the point with the larger delta distance to the blocking points list
                 if current_point.delta_distance > previous_point.delta_distance:
                     self.blocking_points.append(current_point)
-                    print(
-                        f"Blocking point detected at Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
+                    # print(
+                    #     f"Blocking point detected at Index: {current_point.index}, Delta Distance: {current_point.delta_distance}")
                 else:
                     self.blocking_points.append(previous_point)
-                    print(
-                        f"Blocking point detected at Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
+                    # print(
+                    #     f"Blocking point detected at Index: {previous_point.index}, Delta Distance: {previous_point.delta_distance}")
 
     def check_mismatched_start_stop(self, current_start, previous_stop):
         """
@@ -417,20 +417,20 @@ class PathAnalyzer:
             if current_start.northing != previous_stop.northing or current_start.easting != previous_stop.easting:
                 self.blocking_points.append(current_start)
                 # Optionally print debug information
-                print(
-                    f"Mismatched start point at index {current_start.index}, added to blocking points")
+                # print(
+                #     f"Mismatched start point at index {current_start.index}, added to blocking points")
 
     def analyze_last_point(self):
         if self.data.iloc[-1]['Type'] == 3:
             final_point = Point(
-            index=len(self.data) - 1, 
-            northing=self.data.iloc[-1]['Northing'], 
-            easting=self.data.iloc[-1]['Easting'], 
-            elevation=self.data.iloc[-1]['Elevation'], 
-            type=self.data.iloc[-1]['Type'], 
-            interval=self.data.iloc[-1]['Interval'], 
-            length=self.data.iloc[-1]['Length'], 
-            bulge=self.data.iloc[-1]['Bulge'], 
+            index=len(self.data) - 1,
+            northing=self.data.iloc[-1]['Northing'],
+            easting=self.data.iloc[-1]['Easting'],
+            elevation=self.data.iloc[-1]['Elevation'],
+            type=self.data.iloc[-1]['Type'],
+            interval=self.data.iloc[-1]['Interval'],
+            length=self.data.iloc[-1]['Length'],
+            bulge=self.data.iloc[-1]['Bulge'],
             name=self.data.iloc[-1]['Name'].split('__')[0]
             )
 
@@ -452,29 +452,29 @@ class PathAnalyzer:
 
                 # Insert data from the CSV into the Point object:
                 current_point = Point(
-                    index=i, 
-                    northing=self.data.iloc[i]['Northing'], 
-                    easting=self.data.iloc[i]['Easting'], 
-                    elevation=self.data.iloc[i]['Elevation'], 
-                    type=self.data.iloc[i]['Type'], 
-                    interval=self.data.iloc[i]['Interval'], 
-                    length=self.data.iloc[i]['Length'], 
-                    bulge=self.data.iloc[i]['Bulge'], 
+                    index=i,
+                    northing=self.data.iloc[i]['Northing'],
+                    easting=self.data.iloc[i]['Easting'],
+                    elevation=self.data.iloc[i]['Elevation'],
+                    type=self.data.iloc[i]['Type'],
+                    interval=self.data.iloc[i]['Interval'],
+                    length=self.data.iloc[i]['Length'],
+                    bulge=self.data.iloc[i]['Bulge'],
                     name=self.data.iloc[i]['Name'].split('__')[0]
                 )
 
                 next_point = Point(
-                    index=i + 1, 
-                    northing=self.data.iloc[i + 1]['Northing'], 
-                    easting=self.data.iloc[i + 1]['Easting'], 
-                    elevation=self.data.iloc[i + 1]['Elevation'], 
-                    type=self.data.iloc[i + 1]['Type'], 
-                    interval=self.data.iloc[i + 1]['Interval'], 
-                    length=self.data.iloc[i + 1]['Length'], 
-                    bulge=self.data.iloc[i + 1]['Bulge'], 
+                    index=i + 1,
+                    northing=self.data.iloc[i + 1]['Northing'],
+                    easting=self.data.iloc[i + 1]['Easting'],
+                    elevation=self.data.iloc[i + 1]['Elevation'],
+                    type=self.data.iloc[i + 1]['Type'],
+                    interval=self.data.iloc[i + 1]['Interval'],
+                    length=self.data.iloc[i + 1]['Length'],
+                    bulge=self.data.iloc[i + 1]['Bulge'],
                     name=self.data.iloc[i + 1]['Name']
                 )
-                
+
                 # Calculate the Euclidean distance between these points
                 current_point.delta_distance = self.calculate_delta_distance(current_point, next_point)
 
@@ -531,8 +531,8 @@ class PathAnalyzer:
 
             # Ensure that end_index is within bounds
             if end_index > final_index:
-                print(
-                    f"end_index {end_index} is out of bounds. Stopping curve detection.")
+                # print(
+                #     f"end_index {end_index} is out of bounds. Stopping curve detection.")
                 break
 
             # Calculate a score for points in between the start and end index.
@@ -591,8 +591,8 @@ class PathAnalyzer:
         # Check the goodness of fit for the optimized bulge
         goodness_of_fit = self.calculate_goodness_of_fit(
             start_index, end_index, bulge_value)
-        print(
-            f"Goodness of fit for optimized bulge from index {start_index} to {end_index}: {goodness_of_fit:.6f}")
+        # print(
+        #     f"Goodness of fit for optimized bulge from index {start_index} to {end_index}: {goodness_of_fit:.6f}")
 
         return start_index, end_index, bulge_value
 
@@ -633,10 +633,10 @@ class PathAnalyzer:
 
             # Check if the current index is the start of a bulge
             start_index = self.process_point(start_index)
-            
+
         self.final_comprasion_input_output()
         self.adding_stop_points_to_list()
-            
+
     def final_comprasion_input_output(self):
         """
         Perform a final comparison between the `points` list (original data) and the `processed_points` list
@@ -658,7 +658,7 @@ class PathAnalyzer:
             for i in range(0, found_first_index):
                 self.processed_points.insert(i, self.points[i])
             # print(f"Copied missing points before index {found_first_index} to processed_points.")
-        
+
         # Compare the last point in processed_points and points
         last_processed_point = self.processed_points[-1]
 
@@ -675,13 +675,13 @@ class PathAnalyzer:
             for i in range(found_last_index + 1, len(self.points)):
                 self.processed_points.append(self.points[i])
             # print(f"Copied missing points after index {found_last_index} to processed_points.")
-        
+
         # Debug print to confirm all points have been processed
         # print(f"Final check complete. Total points processed: {len(self.processed_points)}")
-        
+
     def adding_stop_points_to_list(self):
         new_processed_points = []  # creating a new list to store the new data including stop points
-        index_counter = 1  # re indexing the list 
+        index_counter = 1  # re indexing the list
 
         for i in range(len(self.processed_points) - 1):
             point = self.processed_points[i]
@@ -691,15 +691,15 @@ class PathAnalyzer:
             point_name = f"{point.name}__{index_counter}_start"
             if point.bulge != 0:
                 point_name += "_bulge"
-            
+
             point.index = index_counter
             point.name = point_name
 
-            
-            
+
+
 
             if point.type == 2:  # If it's a start point
-                
+
                 new_processed_points.append(point)
                 # Create a new stop point based on the next start point
                 stop_point = Point(
@@ -723,7 +723,7 @@ class PathAnalyzer:
 
 
 
-                
+
 
 
     def optimize_bulge(self, start_index, middle_index, end_index):
@@ -749,7 +749,7 @@ class PathAnalyzer:
                 start_index, end_index, bulge_candidate)
             if start_error == None:
                 start_error = error
-                print(f"Error before optimization: {error}")
+                # print(f"Error before optimization: {error}")
             if error < best_error:
                 best_error = error
                 best_bulge = bulge_candidate
@@ -806,7 +806,7 @@ class PathAnalyzer:
 
         # Save the new CSV file
         self.new_data.to_csv(self.output_csv_file, index=False)
-        print(f"New CSV file generated: {self.output_csv_file}")
+        # print(f"New CSV file generated: {self.output_csv_file}")
 
     # def print_processed_points(self):
     #     """Print all processed points in a readable manner."""
