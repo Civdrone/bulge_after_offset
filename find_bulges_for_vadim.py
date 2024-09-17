@@ -873,7 +873,7 @@ def find_bulges(csv_file, output_csv_file):
     analyzer.analyze_start_points()  # Prepare data to analyze it
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
     # Save the optimized bulges to the CSV file
-    analyzer.generate_csv_from_points()
+    # analyzer.generate_csv_from_points()
 
     return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
 
