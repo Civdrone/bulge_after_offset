@@ -680,6 +680,7 @@ class PathAnalyzer:
         # print(f"Final check complete. Total points processed: {len(self.processed_points)}")
 
     def adding_stop_points_to_list(self):
+        self.remove_duplicate_points()
         new_processed_points = []  # creating a new list to store the new data including stop points
         index_counter = 1  # re indexing the list
 
@@ -688,7 +689,7 @@ class PathAnalyzer:
             next_point = self.processed_points[i + 1]
 
             # Rebuild the name for the start point
-            point_name = f"{point.name}__{index_counter}_start"
+            point_name = f"{point.name.split('__')[0]}__{index_counter}_start"
             if point.bulge != 0:
                 point_name += "_bulge"
 
@@ -722,6 +723,27 @@ class PathAnalyzer:
 
 
 
+    def remove_duplicate_points(self):
+        """
+        Remove duplicate points from self.processed_points.
+        A duplicate is defined as a point with the same easting and northing.
+        If duplicates are found, keep the one with the lower index (i.e., earlier in the data).
+        """
+        unique_points = {}
+        for point in self.processed_points:
+            key = (point.easting, point.northing)
+            if key not in unique_points:
+                unique_points[key] = point
+            else:
+                existing_point = unique_points[key]
+                if point.index > existing_point.index:
+                    # Existing point has lower index, skip the current point
+                    continue
+                else:
+                    # Current point has lower index, replace the existing one
+                    unique_points[key] = point
+        # Reconstruct the processed_points list, maintaining the order
+        self.processed_points = sorted(unique_points.values(), key=lambda p: p.index)
 
 
 
@@ -767,46 +789,20 @@ class PathAnalyzer:
         for i in range(len(self.processed_points)):
             point = self.processed_points[i]
 
-            # Add stop point before start point (except for the first point)
-            if i > 0:
-                stop_row = self.data.iloc[point.index].copy()
-                stop_row['Name'] = f"{point.index}_stop"
-                stop_row['Type'] = 3
-                stop_row['Bulge'] = self.processed_points[i - 1].bulge
-                self.new_data = pd.concat(
-                    [self.new_data, pd.DataFrame(stop_row).T], ignore_index=True)
-
             # Add the start point
             start_row = self.data.iloc[point.index].copy()
-            start_row['Name'] = f"{point.index}_start_bulge" if point.bulge != 0 else f"{point.index}_start"
-            start_row['Type'] = 2
+            start_row['Name'] = point.name
+            start_row['Type'] = point.type
             start_row['Bulge'] = point.bulge
+            start_row['Northing'] = point.northing
+            start_row['Easting'] = point.easting
             self.new_data = pd.concat(
                 [self.new_data, pd.DataFrame(start_row).T], ignore_index=True)
-
-        # Add the last stop point for the last point
-        last_point = self.processed_points[-1]
-        last_point_index = last_point.index
-
-        # Check if the last point has a corresponding "stop" point in the original data
-        if last_point_index < len(self.data) - 1 and self.data.iloc[last_point_index + 1]['Type'] == 3:
-            stop_row = self.data.iloc[last_point_index + 1].copy()
-            stop_row['Name'] = f"{last_point_index + 1}_stop"
-            stop_row['Type'] = 3
-            stop_row['Bulge'] = last_point.bulge
-            self.new_data = pd.concat(
-                [self.new_data, pd.DataFrame(stop_row).T], ignore_index=True)
-        else:
-            stop_row = self.data.iloc[last_point.index].copy()
-            stop_row['Name'] = f"{last_point.index}_stop"
-            stop_row['Type'] = 3
-            stop_row['Bulge'] = last_point.bulge
-            self.new_data = pd.concat(
-                [self.new_data, pd.DataFrame(stop_row).T], ignore_index=True)
 
         # Save the new CSV file
         self.new_data.to_csv(self.output_csv_file, index=False)
         # print(f"New CSV file generated: {self.output_csv_file}")
+
 
     # def print_processed_points(self):
     #     """Print all processed points in a readable manner."""

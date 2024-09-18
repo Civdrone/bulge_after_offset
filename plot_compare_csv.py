@@ -92,23 +92,23 @@ while i < len(types_1):
     i += 1
 
 # Plotting the second dataset (Offset Only)
-# i = 0
-# while i < len(types_2):
-#     if types_2[i] == 2:
-#         start_point = (easting_2[i], northing_2[i])
-#         bulge_value = bulges_2[i]
+i = 0
+while i < len(types_2):
+    if types_2[i] == 2:
+        start_point = (easting_2[i], northing_2[i])
+        bulge_value = bulges_2[i]
         
-#         # Find the first Type 3 after this Type 2
-#         for j in range(i + 1, len(types_2)):
-#             if types_2[j] == 3:
-#                 stop_point = (easting_2[j], northing_2[j])
-#                 # Plot the line or curve between the start and stop points
-#                 plot_bulged_line(start_point, stop_point, bulge_value, color='r')
-#                 # Move the index to the next position after the found stop point
-#                 i = j
-#                 break
+        # Find the first Type 3 after this Type 2
+        for j in range(i + 1, len(types_2)):
+            if types_2[j] == 3:
+                stop_point = (easting_2[j], northing_2[j])
+                # Plot the line or curve between the start and stop points
+                plot_bulged_line(start_point, stop_point, bulge_value, color='r')
+                # Move the index to the next position after the found stop point
+                i = j
+                break
     
-#     i += 1
+    i += 1
 
 # Setting plot labels and title
 plt.xlabel('Easting')
