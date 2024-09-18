@@ -709,8 +709,8 @@ class PathAnalyzer:
                     easting=next_point.easting,
                     elevation=next_point.elevation,
                     type=3,  # Set as stop point
-                    interval=next_point.interval,
-                    length=next_point.length,
+                    interval=0.0,
+                    length=0.0,
                     bulge=0.0,  # Stop points have zero bulge
                     name=f"{point.name.split('__')[0]}__{index_counter}_stop"
                 )
