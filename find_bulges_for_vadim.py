@@ -120,32 +120,32 @@ class PathAnalyzer:
         """Calculate the center of the arc described by the given bulge and vertices."""
         angle_between_points = np.arctan2(
             end_point.northing - start_point.northing, end_point.easting - start_point.easting)
-        
+
         half_angle = np.arctan(bulge)
-        
+
         # Calculate chord length (distance between start and end points)
-        chord_length = np.linalg.norm([end_point.easting - start_point.easting, 
+        chord_length = np.linalg.norm([end_point.easting - start_point.easting,
                                     end_point.northing - start_point.northing])
-        
+
         # Calculate the radius of the arc
         bulge_radius = chord_length / (2 * np.abs(bulge))
-        
+
         # Calculate the distance from the chord's midpoint to the arc's center
         sagitta = bulge * bulge_radius
-        
+
         # Find the midpoint of the chord
         mid_x = (start_point.easting + end_point.easting) / 2
         mid_y = (start_point.northing + end_point.northing) / 2
-        
+
         # Calculate the center of the arc (polar coordinates from the midpoint)
         if bulge > 0:
             center_angle = angle_between_points + np.pi / 2
         else:
             center_angle = angle_between_points - np.pi / 2
-        
+
         center_x = mid_x + sagitta * np.cos(center_angle)
         center_y = mid_y + sagitta * np.sin(center_angle)
-        
+
         return np.array([center_x, center_y])
 
 
@@ -176,7 +176,7 @@ class PathAnalyzer:
         distance_to_arc = np.abs(distance_to_center - arc_radius)
 
         return distance_to_arc
-    
+
     def calculate_distance(self, point1, point2):
         """Helper function to calculate the Euclidean distance between two points."""
         return ((point1.northing - point2.northing) ** 2 + (point1.easting - point2.easting) ** 2) ** 0.5
@@ -578,7 +578,7 @@ class PathAnalyzer:
 
                 index_counter += 1
                 max_curve_found = True
-                
+
             # elif self.points[end_index].delta_heading < 0.1:
             #     index_counter += 1
             #     max_curve_found = True
@@ -592,19 +592,19 @@ class PathAnalyzer:
             start_index , end_index , bulge_value = self.process_curve_found(start_index, end_index, final_index, self.points)
             # start_index , end_index , bulge_value = self.check_bulge_integrity(start_index, end_index, final_index, self.points)
             return start_index , end_index , bulge_value
-        
+
         else:
             return None
 
     # def check_bulge_integrity(self, start_index, end_index, final_index, points_list):
-        
+
     #     while points_list[end_index].delta_distance <= 0.1:
     #         end_index +=1
-            
+
     #     self.process_curve_found(start_index, end_index, final_index, self.points)
-    
-    
-    
+
+
+
     def process_curve_found(self, start_index, end_index, final_index, points_list):
         """Process the curve found by extending the indices and calculating the bulge."""
         end_index -= 1
@@ -668,8 +668,8 @@ class PathAnalyzer:
         self.final_comprasion_input_output()
         self.handle_corners()
         self.adding_stop_points_to_list()
-        
-        
+
+
 
 
     def handle_corners(self):
@@ -697,11 +697,11 @@ class PathAnalyzer:
         # Recalculate delta distances after clustering and apply the operable dash length threshold
         self.enforce_min_operable_dash_length()
         self.handle_corrupted_corners()
-        
+
     def handle_corrupted_corners(self):
         """
-        Detect and handle cases where two consecutive points have a similar bulge value (same sign, 
-        small difference) and a small delta distance. Remove the first point and reset the bulge 
+        Detect and handle cases where two consecutive points have a similar bulge value (same sign,
+        small difference) and a small delta distance. Remove the first point and reset the bulge
         of the second point to 0.
         """
         i = 0
@@ -726,12 +726,12 @@ class PathAnalyzer:
 
 
     def corrupted_corner_detected(self, point_1_index, point_2_index):
-        
+
         """
         Handle a corrupted corner case by removing the first point and setting the bulge
         of the second point to 0.
         """
-        
+
         # Remove the first point from the processed points
         self.processed_points.pop(point_1_index)
 
@@ -1002,10 +1002,10 @@ class PathAnalyzer:
 
         # Save the new CSV file
         self.new_data.to_csv(self.output_csv_file, index=False)
-        print(f"New CSV file generated: {self.output_csv_file}")
+        # print(f"New CSV file generated: {self.output_csv_file}")
 
-        
-        
+
+
     def extract_start_points(self, csv_file_path):
         """Extract only Type 2 (start) points from the CSV file and calculate delta heading and delta distance."""
         self.data = pd.read_csv(csv_file_path)
@@ -1017,7 +1017,7 @@ class PathAnalyzer:
         for i in range(len(self.data)):
             if self.data.iloc[i]['Type'] == 2:
                 current_point = Point(
-                    index=i, 
+                    index=i,
                     northing=self.data.iloc[i]['Northing'],
                     easting=self.data.iloc[i]['Easting'],
                     elevation=self.data.iloc[i]['Elevation'],
@@ -1027,15 +1027,15 @@ class PathAnalyzer:
                     bulge=self.data.iloc[i]['Bulge'],
                     name=self.data.iloc[i]['Name']
                 )
-                
+
                 if previous_point:
                     # Calculate delta distance and delta heading
                     current_point.delta_distance = self.calculate_delta_distance(previous_point, current_point)
                     current_point.delta_heading = self.calculate_delta_heading(previous_point, current_point, previous_heading)
-                    
+
                     # Update the previous_heading
                     previous_heading = self.calculate_heading(previous_point, current_point)
-                
+
                 # Append the current point to the list of points
 
                 self.points.append(current_point)
@@ -1058,7 +1058,7 @@ def find_bulges(csv_file, output_csv_file):
     analyzer = PathAnalyzer(csv_file, output_csv_file)
     analyzer.analyze_start_points()  # Prepare data to analyze it
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
-    
+
     # Save the optimized bulges to the CSV file
     # analyzer.generate_csv_from_points()
 
@@ -1079,7 +1079,7 @@ if __name__ == "__main__":
 
         points_data = find_bulges(input_csv_file, output_csv_file)
         # points_data = extract_start_points_and_correct_corners(input_csv_file, output_csv_file)
-        
+
         res = json.dumps(points_data)
         sys.stdout.write(res)
         sys.stdout.flush()
