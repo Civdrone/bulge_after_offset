@@ -25,8 +25,14 @@ K_BLOCKING = 0.7
 ###############################
 
 ##### minimum bulge value ###########
-MIN_BULGE = 1e-5
-CLUSTER_MAX_DISTANCE = 0.2
+MIN_BULGE_POINTS = 2 # minimum number of points that can create a bulge.
+MIN_BULGE = 0.01
+MIN_BULGE_LENGTH = 0.3 # m
+CLUSTER_MAX_DISTANCE = 0.3
+MIN_OPERABLE_DASH_LENGTH = 0.2  # The minimum delta distance for bulge points
+CORNER_THRESHOLD = 0.6  # Maximum delta distance for detecting a corrupted corner
+BULGE_DIFFERENCE_THRESHOLD = 0.1  # Maximum allowed difference in bulge values for corrupted corners
+MIN_POINT_DELTA_DISTANCE = 0.05
 ###################################
 
 
@@ -114,29 +120,34 @@ class PathAnalyzer:
         """Calculate the center of the arc described by the given bulge and vertices."""
         angle_between_points = np.arctan2(
             end_point.northing - start_point.northing, end_point.easting - start_point.easting)
-        half_pi = np.pi / 2
-        bulge_angle = np.arctan(bulge)
-
-        # Calculate the center of the arc
-        # Calculate start point coordinates
-        start_x = start_point.easting
-        start_y = start_point.northing
-
-        # Calculate angle between points and adjust using half_pi and bulge_angle
-        adjusted_angle = angle_between_points + (half_pi - 2 * bulge_angle)
-
-        # Calculate the bulge radius
-        bulge_radius = self.calculate_bulge_radius(
-            start_point, end_point, bulge)
-
-        # Multiply the radius by the bulge
-        adjusted_radius = bulge_radius * bulge
-
-        # Use polar coordinates to find the center coordinates
-        center_x, center_y = self.polar(
-            (start_x, start_y), adjusted_angle, adjusted_radius)
-
+        
+        half_angle = np.arctan(bulge)
+        
+        # Calculate chord length (distance between start and end points)
+        chord_length = np.linalg.norm([end_point.easting - start_point.easting, 
+                                    end_point.northing - start_point.northing])
+        
+        # Calculate the radius of the arc
+        bulge_radius = chord_length / (2 * np.abs(bulge))
+        
+        # Calculate the distance from the chord's midpoint to the arc's center
+        sagitta = bulge * bulge_radius
+        
+        # Find the midpoint of the chord
+        mid_x = (start_point.easting + end_point.easting) / 2
+        mid_y = (start_point.northing + end_point.northing) / 2
+        
+        # Calculate the center of the arc (polar coordinates from the midpoint)
+        if bulge > 0:
+            center_angle = angle_between_points + np.pi / 2
+        else:
+            center_angle = angle_between_points - np.pi / 2
+        
+        center_x = mid_x + sagitta * np.cos(center_angle)
+        center_y = mid_y + sagitta * np.sin(center_angle)
+        
         return np.array([center_x, center_y])
+
 
     def calculate_bulge_radius(self, start_point, end_point, bulge):
         """Calculate the radius of the arc described by the given bulge and vertices."""
@@ -165,6 +176,10 @@ class PathAnalyzer:
         distance_to_arc = np.abs(distance_to_center - arc_radius)
 
         return distance_to_arc
+    
+    def calculate_distance(self, point1, point2):
+        """Helper function to calculate the Euclidean distance between two points."""
+        return ((point1.northing - point2.northing) ** 2 + (point1.easting - point2.easting) ** 2) ** 0.5
 
 ################################################### End math functions ############################################################################
 
@@ -479,9 +494,15 @@ class PathAnalyzer:
                 # Calculate the Euclidean distance between these points
                 current_point.delta_distance = self.calculate_delta_distance(current_point, next_point)
 
+                # Skip the point if the delta distance is less than 0.1
+                if current_point.delta_distance < MIN_POINT_DELTA_DISTANCE:
+                    # print(f"Point at index {i} removed due to small delta distance ({current_point.delta_distance:.6f} meters).")
+                    continue
+
                 # Calculate the delta heading between current and next points
                 current_point.delta_heading = self.calculate_delta_heading(
                     current_point, next_point, previous_heading)
+
                 # Update previous_heading for the next iteration
                 previous_heading = self.calculate_heading(
                     current_point, next_point)
@@ -492,10 +513,9 @@ class PathAnalyzer:
                 previous_point = current_point  # Store the current point for the next comparison
 
                 # Check for mismatched start and stop points and append to blocking points
-                self.check_mismatched_start_stop(
-                    current_point, previous_stop_point)
+                self.check_mismatched_start_stop(current_point, previous_stop_point)
 
-                # append the point with all the required data in the same order as the CSV file
+                # Append the point with all the required data in the same order as the CSV file
                 self.points.append(current_point)
 
             elif self.data.iloc[i]['Type'] == 3:
@@ -503,9 +523,10 @@ class PathAnalyzer:
                 previous_stop_point = Point(
                     index=i, northing=self.data.iloc[i]['Northing'], easting=self.data.iloc[i]['Easting'])
 
-        # a special case. generally we take into account only the start points and ignore the stop points.
-        # at the final stop point there will not be also a start point so we also add the final stop point to our points list
+        # A special case: generally, we take into account only the start points and ignore the stop points.
+        # At the final stop point, there will not be a start point, so we add the final stop point to our points list.
         self.analyze_last_point()
+
 
 ########################################################### pre proccessing functions ##########################################################################
 
@@ -523,7 +544,7 @@ class PathAnalyzer:
         # Adjust the final index to be within the bounds of the points list.
         final_index = len(self.points) - 1
         # A bulge will have at least 3 points (start index + 2 points).
-        index_counter = 7
+        index_counter = MIN_BULGE_POINTS - 1
         # Limiting the max points based on the total number of points.
         max_points = final_index - start_index
 
@@ -557,6 +578,10 @@ class PathAnalyzer:
 
                 index_counter += 1
                 max_curve_found = True
+                
+            # elif self.points[end_index].delta_heading < 0.1:
+            #     index_counter += 1
+            #     max_curve_found = True
 
             else:  # The curve conditions are not met anymore
                 # print(f"Stopping extension at index {end_index}, total sum {total_sum} exceeds threshold {threshold}")
@@ -564,38 +589,43 @@ class PathAnalyzer:
 
         # If a valid curve was found, process the curve
         if max_curve_found:
-            return self.process_curve_found(start_index, end_index, final_index, self.points)
+            start_index , end_index , bulge_value = self.process_curve_found(start_index, end_index, final_index, self.points)
+            # start_index , end_index , bulge_value = self.check_bulge_integrity(start_index, end_index, final_index, self.points)
+            return start_index , end_index , bulge_value
+        
         else:
             return None
 
-
+    # def check_bulge_integrity(self, start_index, end_index, final_index, points_list):
+        
+    #     while points_list[end_index].delta_distance <= 0.1:
+    #         end_index +=1
+            
+    #     self.process_curve_found(start_index, end_index, final_index, self.points)
+    
+    
+    
     def process_curve_found(self, start_index, end_index, final_index, points_list):
-        """Process the curve found by extending the indices and calculating the bulge.
-        this function returns the final start index , end index, and bulge of the curve"""
-
-        # Go back one step to the last valid curve
+        """Process the curve found by extending the indices and calculating the bulge."""
         end_index -= 1
 
-        # Extend the curve by one index backward and forward, ensuring no extension into blocking points
-        # (we do this because the start and end indexes "score" are affected by the non curve points next to them and destroying their scores)
         if start_index > 0 and points_list[start_index - 1] not in self.blocking_points:
             start_index -= 1
         if end_index < final_index and points_list[end_index + 1] not in self.blocking_points:
             end_index += 1
 
-        # finding the middle index, we need it for the bulge calculation
         middle_index = self.find_middle_index(start_index, end_index)
-
-        # calculating the bulge based on the start middle and end indexes
         bulge_value = self.optimize_bulge(start_index, middle_index, end_index)
 
-        # Check the goodness of fit for the optimized bulge
-        goodness_of_fit = self.calculate_goodness_of_fit(
-            start_index, end_index, bulge_value, points_list)
-        # print(
-        #     f"Goodness of fit for optimized bulge from index {start_index} to {end_index}: {goodness_of_fit:.6f}")
+        for i in range(start_index, end_index + 1):
+            point = points_list[i]
+            # Ensure interval, length, and other key attributes are preserved
+            point.interval = self.points[i].interval
+            point.length = self.points[i].length
+            # You may also copy other attributes here as needed
 
         return start_index, end_index, bulge_value
+
 
 
     def process_point(self, start_index):
@@ -636,7 +666,162 @@ class PathAnalyzer:
             start_index = self.process_point(start_index)
 
         self.final_comprasion_input_output()
+        self.handle_corners()
         self.adding_stop_points_to_list()
+        
+        
+
+
+    def handle_corners(self):
+        """Calculate and store delta distances, then cluster points."""
+        if len(self.processed_points) < 2:
+            # print("Not enough points to calculate delta distances.")
+            return
+
+        # Calculate the initial delta distances and headings
+        # print("Delta distances between consecutive points:")
+        for i in range(1, len(self.processed_points)):
+            prev_point = self.processed_points[i - 1]
+            current_point = self.processed_points[i]
+
+            delta_distance = self.calculate_delta_distance(prev_point, current_point)
+            current_point.index = i
+            current_point.delta_distance = delta_distance
+            current_point.delta_heading = self.calculate_delta_heading(prev_point, current_point)
+
+            # print(f"Delta distance between point {i - 1} and point {i}: {delta_distance:.6f} meters")
+
+        # Perform clustering and bulge processing
+        self.processed_points = self.find_and_replace_clusters_with_middle_point(self.processed_points)
+
+        # Recalculate delta distances after clustering and apply the operable dash length threshold
+        self.enforce_min_operable_dash_length()
+        self.handle_corrupted_corners()
+        
+    def handle_corrupted_corners(self):
+        """
+        Detect and handle cases where two consecutive points have a similar bulge value (same sign, 
+        small difference) and a small delta distance. Remove the first point and reset the bulge 
+        of the second point to 0.
+        """
+        i = 0
+        while i < len(self.processed_points) - 1:
+            point_1 = self.processed_points[i]
+            point_2 = self.processed_points[i + 1]
+
+            # Check if both points have bulge values with the same sign and the difference is within the threshold
+            if (point_1.bulge * point_2.bulge > 0) and (abs(point_1.bulge - point_2.bulge) < BULGE_DIFFERENCE_THRESHOLD):
+                # Check if the delta distance is below the corner threshold
+                if point_1.delta_distance < CORNER_THRESHOLD:
+                    # print(f"Corrupted corner detected between points {i} and {i+1}. Removing point {i}.")
+
+                    # Call the corrupted corner detected function
+                    self.corrupted_corner_detected(i, i + 1)
+
+                    # After removal, we don't increment i because the points shift
+                    continue
+
+            # Increment index to check next set of points
+            i += 1
+
+
+    def corrupted_corner_detected(self, point_1_index, point_2_index):
+        
+        """
+        Handle a corrupted corner case by removing the first point and setting the bulge
+        of the second point to 0.
+        """
+        
+        # Remove the first point from the processed points
+        self.processed_points.pop(point_1_index)
+
+        # Set the bulge of the second point to 0
+        if point_2_index < len(self.processed_points):
+            self.processed_points[point_2_index - 1].bulge = 0  # point_2_index shifts after pop
+            # print(f"Bulge of point {point_2_index - 1} set to 0.")
+
+
+    def enforce_min_operable_dash_length(self):
+        """
+        Enforce the minimum operable dash length (MIN_OPERABLE_DASH_LENGTH) by recalculating
+        delta distances and removing points after bulges if necessary. Repeat until all bulge points
+        satisfy the minimum dash length condition.
+        """
+        while True:
+            has_short_bulges = False
+
+            # Recalculate delta distances and enforce the minimum operable dash length
+            for i in range(1, len(self.processed_points)):
+                prev_point = self.processed_points[i - 1]
+                current_point = self.processed_points[i]
+
+                delta_distance = self.calculate_delta_distance(prev_point, current_point)
+                current_point.delta_distance = delta_distance
+                current_point.delta_heading = self.calculate_delta_heading(prev_point, current_point)
+
+                # Check if the current point is a bulge and if the delta distance is below the threshold
+                if  delta_distance < MIN_OPERABLE_DASH_LENGTH:
+                    # print(f"Removing point {i} after bulge due to short delta distance ({delta_distance:.6f} meters).")
+                    self.processed_points.pop(i)  # Remove the point after the bulge
+                    has_short_bulges = True
+                    break  # Exit loop to recalculate the delta distances after removing the point
+
+            if not has_short_bulges:
+                # All bulges satisfy the minimum dash length condition
+                break
+
+        # print("Final delta distances and bulge points processed.")
+
+    def find_and_replace_clusters_with_middle_point(self, points, max_distance=CLUSTER_MAX_DISTANCE):
+        clusters = []
+        current_cluster = [points[0]]
+        corrected_points = []
+
+        for i in range(1, len(points)):
+            distance = self.calculate_distance(points[i], current_cluster[0])
+
+            if distance <= max_distance:
+                current_cluster.append(points[i])
+            else:
+                if len(current_cluster) > 2:
+                    clusters.append(current_cluster)
+                current_cluster = [points[i]]
+
+        if len(current_cluster) > 2:
+            clusters.append(current_cluster)
+
+        for cluster in clusters:
+            contains_bulge = any(point.bulge != 0 for point in cluster)
+            if contains_bulge:
+                start_index = cluster[0].index
+                end_index = cluster[-1].index
+
+                try:
+                    start_index, end_index, bulge_value = self.process_curve_found(
+                        start_index, end_index, len(self.processed_points) - 1, self.processed_points)
+                    # Carry over interval and length
+                    for idx in range(start_index, end_index + 1):
+                        self.processed_points[idx].interval = self.points[idx].interval
+                        self.processed_points[idx].length = self.points[idx].length
+                except (IndexError, ValueError) as e:
+                    pass
+            else:
+                avg_easting = sum(point.easting for point in cluster) / len(cluster)
+                avg_northing = sum(point.northing for point in cluster) / len(cluster)
+                middle_point = cluster[0]  # Inherit properties from the first point
+                middle_point.easting = avg_easting
+                middle_point.northing = avg_northing
+                corrected_points.append(middle_point)
+
+        non_clustered_points = [point for point in points if all(point not in cluster for cluster in clusters)]
+        corrected_points.extend(non_clustered_points)
+
+        # print(f"Found and replaced {len(clusters)} clusters of points within {max_distance} meters.")
+        return corrected_points
+
+
+
+
 
     def final_comprasion_input_output(self):
         """
@@ -682,7 +867,6 @@ class PathAnalyzer:
 
     def adding_stop_points_to_list(self):
         self.remove_duplicate_points()
-        # self.correct_corners()
         new_processed_points = []  # creating a new list to store the new data including stop points
         index_counter = 1  # re indexing the list
 
@@ -698,12 +882,23 @@ class PathAnalyzer:
             point.index = index_counter
             point.name = point_name
 
+            # Calculate delta distance between the start point and the next point
+            delta_distance = self.calculate_delta_distance(point, next_point)
 
+            # Check if the delta distance is shorter than interval or length
+            if delta_distance < point.interval:
+                # print(f"Delta distance ({delta_distance:.6f}) is smaller than interval ({point.interval:.6f}) for point {point.index}. Setting interval and length to 0.")
+                point.interval = 0.0
+                point.length = 0.0
 
+            if delta_distance < point.length:
+                # print(f"Delta distance ({delta_distance:.6f}) is smaller than length ({point.length:.6f}) for point {point.index}. Setting length and interval to 0.")
+                point.length = 0.0
+                point.interval = 0.0
 
             if point.type == 2:  # If it's a start point
-
                 new_processed_points.append(point)
+
                 # Create a new stop point based on the next start point
                 stop_point = Point(
                     index=index_counter,  # Use the same index as the start point
@@ -718,10 +913,10 @@ class PathAnalyzer:
                 )
 
                 new_processed_points.append(stop_point)
-
                 index_counter += 1
 
         self.processed_points = new_processed_points
+
 
 
 
@@ -747,86 +942,6 @@ class PathAnalyzer:
         # Reconstruct the processed_points list, maintaining the order
         self.processed_points = sorted(unique_points.values(), key=lambda p: p.index)
 
-    # def correct_corners(self):
-        
-
-    # def correct_corners(self):
-    #     i = 1
-    #     while i < len(self.processed_points) - 1:
-    #         prev_point = self.processed_points[i - 1]
-    #         current_point = self.processed_points[i]
-
-    #         # Check if the previous point has a high delta heading
-    #         if abs(prev_point.delta_distance) > 1.0:
-    #             # Start looking for points with small delta heading
-    #             start_index = i
-    #             max_curve_found = False
-    #             index_counter = 1
-
-    #             # Extend the curve if delta headings are small (< 0.3) between the points
-    #             while start_index + index_counter < len(self.processed_points) - 1:
-    #                 next_point = self.processed_points[start_index + index_counter]
-    #                 if abs(next_point.delta_distance) < 0.1:
-    #                     # Calculate delta distance between the first and last point
-    #                     delta_distance = self.calculate_delta_distance(self.processed_points[start_index], next_point)
-
-    #                     # Break if the delta distance exceeds 0.3 meters and take the last valid point
-    #                     if delta_distance > 0.3:
-    #                         break
-
-    #                     index_counter += 1
-    #                     max_curve_found = True
-    #                 else:
-    #                     break
-
-    #             # Ensure that the curve has points with high delta heading at both ends
-    #             if max_curve_found and abs(next_point.delta_distance) > 1.0:
-    #                 # Collect the points from prev_point to next_point
-    #                 corner_points = self.processed_points[start_index - 1:start_index + index_counter + 1]
-
-    #                 # Send the points to the new_corner_generator function
-    #                 new_corner_points = self.new_corner_generator(corner_points)
-
-    #                 # Replace the points in the processed list with the new ones
-    #                 self.processed_points[start_index - 1:start_index + index_counter + 1] = new_corner_points
-
-    #                 # Move the index to the end of the processed section
-    #                 i = start_index + index_counter + 1
-    #             else:
-    #                 i += 1
-    #         else:
-    #             i += 1
-                
-    # def new_corner_generator(self, corner_points):
-    #     start_point = corner_points[0]
-    #     end_point = corner_points[-1]
-        
-    #     # Initializing new points as copies of start and end
-    #     new_start_point = start_point
-    #     new_end_point = end_point
-        
-    #     # Calculate distance between start and end points
-    #     delta_distance = self.calculate_delta_distance(start_point, end_point)
-        
-    #     # If the distance is very small, use create_corner to generate new points
-    #     if delta_distance < 0.1:
-    #         new_corner_points =  [new_end_point]
-
-    #     else:
-    #         # Find the bulge value for the points in the corner
-    #         start_index = 0
-    #         end_index = len(self.processed_points) - 1
-            
-    #         # Ensure process_curve_found is called correctly with proper start and end index
-    #         final_index = len(self.processed_points) - 1
-    #         _, _, bulge = self.process_curve_found(start_index, end_index, end_index, self.processed_points)
-            
-    #         # Apply the bulge to the new start point
-    #         new_start_point.bulge = bulge
-    #         new_corner_points = [new_start_point] + [new_end_point]
-        
-        
-    #     return new_corner_points
 
 
     def optimize_bulge(self, start_index, middle_index, end_index):
@@ -870,174 +985,68 @@ class PathAnalyzer:
         for i in range(len(self.processed_points)):
             point = self.processed_points[i]
 
-            # Add the start point
+            # Add the start point, including interval and length
             start_row = self.data.iloc[point.index].copy()
             start_row['Name'] = point.name
             start_row['Type'] = point.type
             start_row['Bulge'] = point.bulge
             start_row['Northing'] = point.northing
             start_row['Easting'] = point.easting
+
+            # Adding the interval and length data
+            start_row['Interval'] = point.interval
+            start_row['Length'] = point.length
+
             self.new_data = pd.concat(
                 [self.new_data, pd.DataFrame(start_row).T], ignore_index=True)
 
         # Save the new CSV file
         self.new_data.to_csv(self.output_csv_file, index=False)
-        # print(f"New CSV file generated: {self.output_csv_file}")
+        print(f"New CSV file generated: {self.output_csv_file}")
+
         
         
-    # def extract_start_points(self, csv_file_path):
-    #     """Extract only Type 2 (start) points from the CSV file and calculate delta heading and delta distance."""
-    #     self.data = pd.read_csv(csv_file_path)
+    def extract_start_points(self, csv_file_path):
+        """Extract only Type 2 (start) points from the CSV file and calculate delta heading and delta distance."""
+        self.data = pd.read_csv(csv_file_path)
 
-    #     previous_heading = None
-    #     previous_point = None
+        previous_heading = None
+        previous_point = None
 
-    #     # Loop through the rows of the CSV and extract Type 2 (start points)
-    #     for i in range(len(self.data)):
-    #         if self.data.iloc[i]['Type'] == 2:
-    #             current_point = Point(
-    #                 index=i, 
-    #                 northing=self.data.iloc[i]['Northing'],
-    #                 easting=self.data.iloc[i]['Easting'],
-    #                 elevation=self.data.iloc[i]['Elevation'],
-    #                 type=self.data.iloc[i]['Type'],
-    #                 interval=self.data.iloc[i]['Interval'],
-    #                 length=self.data.iloc[i]['Length'],
-    #                 bulge=self.data.iloc[i]['Bulge'],
-    #                 name=self.data.iloc[i]['Name']
-    #             )
+        # Loop through the rows of the CSV and extract Type 2 (start points)
+        for i in range(len(self.data)):
+            if self.data.iloc[i]['Type'] == 2:
+                current_point = Point(
+                    index=i, 
+                    northing=self.data.iloc[i]['Northing'],
+                    easting=self.data.iloc[i]['Easting'],
+                    elevation=self.data.iloc[i]['Elevation'],
+                    type=self.data.iloc[i]['Type'],
+                    interval=self.data.iloc[i]['Interval'],
+                    length=self.data.iloc[i]['Length'],
+                    bulge=self.data.iloc[i]['Bulge'],
+                    name=self.data.iloc[i]['Name']
+                )
                 
-    #             if previous_point:
-    #                 # Calculate delta distance and delta heading
-    #                 current_point.delta_distance = self.calculate_delta_distance(previous_point, current_point)
-    #                 current_point.delta_heading = self.calculate_delta_heading(previous_point, current_point, previous_heading)
+                if previous_point:
+                    # Calculate delta distance and delta heading
+                    current_point.delta_distance = self.calculate_delta_distance(previous_point, current_point)
+                    current_point.delta_heading = self.calculate_delta_heading(previous_point, current_point, previous_heading)
                     
-    #                 # Update the previous_heading
-    #                 previous_heading = self.calculate_heading(previous_point, current_point)
+                    # Update the previous_heading
+                    previous_heading = self.calculate_heading(previous_point, current_point)
                 
-    #             # Append the current point to the list of points
+                # Append the current point to the list of points
 
-    #             self.points.append(current_point)
+                self.points.append(current_point)
 
-    #             # Set the previous point for the next iteration
-    #             previous_point = current_point
+                # Set the previous point for the next iteration
+                previous_point = current_point
 
-    #     return self.points
-
-
+        return self.points
 
 
-# import matplotlib.pyplot as plt
 
-# def find_and_replace_clusters_with_middle_point(points, max_distance=CLUSTER_MAX_DISTANCE):
-#     """
-#     Finds clusters of points where the maximum distance between two farthest points
-#     in a cluster is <= max_distance, generates a middle point for each cluster,
-#     and replaces all points in that cluster with the new middle point.
-    
-#     Args:
-#         points: List of Point objects (generated from extract_start_points).
-#         max_distance: Maximum allowed distance (default is 0.3 meters).
-    
-#     Returns:
-#         corrected_points: List of corrected points where clusters are replaced by the middle point.
-#     """
-#     clusters = []  # To store the clusters of points
-#     current_cluster = [points[0]]  # Start with the first point in a cluster
-#     corrected_points = []  # To store the final list of points with replacements
-
-#     # Iterate through the list of points
-#     for i in range(1, len(points)):
-#         # Calculate the distance between the current point and the first point in the cluster
-#         distance = calculate_distance(points[i], current_cluster[0])
-
-#         if distance <= max_distance:
-#             # Add the point to the current cluster if within the max_distance
-#             current_cluster.append(points[i])
-#         else:
-#             # If distance exceeds, save the current cluster and start a new one
-#             if len(current_cluster) > 5:  # Only save clusters with more than 3 points
-#                 clusters.append(current_cluster)
-#             current_cluster = [points[i]]  # Start a new cluster with the current point
-
-#     # Append the last cluster if valid
-#     if len(current_cluster) > 1:
-#         clusters.append(current_cluster)
-
-#     # Replace clusters with their middle point
-#     for cluster in clusters:
-#         # Calculate the centroid (middle point) for each cluster
-#         avg_easting = sum(point.easting for point in cluster) / len(cluster)
-#         avg_northing = sum(point.northing for point in cluster) / len(cluster)
-
-#         # Create a new middle point based on the first point's properties but using the average location
-#         middle_point = cluster[0]  # Inherit all properties of the first point
-#         middle_point.easting = avg_easting
-#         middle_point.northing = avg_northing
-
-#         # Add this middle point once instead of all the points in the cluster
-#         corrected_points.append(middle_point)
-
-#     # Add remaining points that were not clustered
-#     non_clustered_points = [point for point in points if all(point not in cluster for cluster in clusters)]
-#     corrected_points.extend(non_clustered_points)
-
-#     # Print the results
-#     if clusters:
-#         print(f"Found and replaced {len(clusters)} clusters of points within {max_distance} meters.")
-#     else:
-#         print("No clusters found.")
-
-#     return corrected_points
-
-
-# def calculate_distance(point1, point2):
-#     """
-#     Helper function to calculate the Euclidean distance between two points.
-#     """
-#     return ((point1.northing - point2.northing) ** 2 + (point1.easting - point2.easting) ** 2) ** 0.5
-
-    # def print_processed_points(self):
-    #     """Print all processed points in a readable manner."""
-    #     print("\nProcessed Points:")
-    #     for point in self.processed_points:
-    #         print(point)
-    #     print("\n")
-
-    # def plot_errors_for_each_bulge(self):
-    #     """Plot the errors for each bulge on separate graphs."""
-    #     for i, errors in enumerate(self.bulge_errors, 1):
-    #         indexes, error_values = zip(*errors)
-    #         plt.figure(figsize=(10, 6))
-    #         plt.plot(indexes, error_values, marker='o',
-    #                  linestyle='-', color='b')
-    #         plt.xlabel('Index')
-    #         plt.ylabel('Error')
-    #         plt.title(f'Error per Index for Bulge {i}')
-    #         plt.grid(True)
-    #         plt.show()
-    #         input(f"Press Enter to continue to the next bulge...")
-
-    # def plot_data(self, delta_distances, delta_headings):
-    #     """Plot delta distances and delta headings on separate subplots."""
-    #     plt.figure(figsize=(12, 8))
-
-    #     plt.subplot(2, 1, 1)
-    #     plt.plot(delta_distances, 'bo-', label='Delta Distance')
-    #     plt.xlabel('Point Number')
-    #     plt.ylabel('Delta Distance')
-    #     plt.title('Delta Distance Between Points')
-    #     plt.grid(True)
-
-    #     plt.subplot(2, 1, 2)
-    #     plt.plot(delta_headings, 'ro-', label='Delta Heading')
-    #     plt.xlabel('Point Number')
-    #     plt.ylabel('Delta Heading (radians)')
-    #     plt.title('Delta Heading Between Points')
-    #     plt.grid(True)
-
-    #     plt.tight_layout()
-    #     plt.show()
 
 ############################################### End of debug functions #####################################################################
 
@@ -1064,7 +1073,7 @@ if __name__ == "__main__":
 
         input_csv_file = sys.argv[PATH_INPUT]
         # input_csv_file = r'C:\Users\benny\OneDrive\Desktop\code\non_dash_final_test.csv'
-        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\non_dash_final_test.csv'
+        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
