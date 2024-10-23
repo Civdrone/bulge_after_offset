@@ -24,7 +24,7 @@ def plot_bulged_line(start, stop, bulge):
     plt.plot(stop[0], stop[1], 'ro', markersize=8)  # 'ro' for red end point
 
 # Reading the CSV file
-data = pd.read_csv("C:\\Users\\benny\\OneDrive\\Desktop\\code\\output.csv")
+data = pd.read_csv("C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv")
 
 # Extracting the necessary columns
 names = data['Name']

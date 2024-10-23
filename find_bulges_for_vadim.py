@@ -971,7 +971,9 @@ class PathAnalyzer:
             if error < best_error:
                 best_error = error
                 best_bulge = bulge_candidate
-
+                
+        self.points[start_index].bulge = best_bulge
+        self.points[end_index].bulge = 0
         return best_bulge
 
 
@@ -1060,29 +1062,43 @@ def find_bulges(csv_file, output_csv_file):
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
     
     # Save the optimized bulges to the CSV file
-    # analyzer.generate_csv_from_points()
+    analyzer.generate_csv_from_points()
 
     return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
+
+
+def three_points_to_bulge(csv_file, output_csv_file):
+    analyzer = PathAnalyzer(csv_file, output_csv_file)
+    
+    analyzer.analyze_start_points()  # Prepare data to analyze it
+    points = analyzer.points
+    analyzer.optimize_bulge(0, 1, 2)  # we suppose to receive 3 points.
+    points = analyzer.points
+    points.pop(1) # we remove the middle point
+    points[0].type = 2 # we force set the type to start bulge
+    points[1].type = 3 # we force set the type to stop bulge
+    return [point.to_coordinates_metadata_dict() for point in points]
+
 
 
 if __name__ == "__main__":
     PATH_INPUT = 1
 
     try:
-        root_dir = os.path.dirname(os.path.abspath(__file__))
+        # root_dir = os.path.dirname(os.path.abspath(__file__))
 
-        input_csv_file = sys.argv[PATH_INPUT]
-        # input_csv_file = r'C:\Users\benny\OneDrive\Desktop\code\non_dash_final_test.csv'
-        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        # input_csv_file = sys.argv[PATH_INPUT]
+        output_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\output.csv'
+        input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
-        output_csv_file = os.path.join(root_dir, 'output.csv')
+        # output_csv_file = os.path.join(root_dir, 'output.csv')
 
-        points_data = find_bulges(input_csv_file, output_csv_file)
+        points_data = three_points_to_bulge(input_csv_file, output_csv_file)
         # points_data = extract_start_points_and_correct_corners(input_csv_file, output_csv_file)
         
-        res = json.dumps(points_data)
-        sys.stdout.write(res)
-        sys.stdout.flush()
+        # res = json.dumps(points_data)
+        # sys.stdout.write(res)
+        # sys.stdout.flush()
     except IndexError:
         sys.stderr.write("Error: Missing required command-line arguments.\n")
         sys.stderr.flush()
