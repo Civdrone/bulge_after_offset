@@ -1053,16 +1053,13 @@ class PathAnalyzer:
 ############################################### End of debug functions #####################################################################
 
 
-
-
-
 def find_bulges(csv_file, output_csv_file):
     analyzer = PathAnalyzer(csv_file, output_csv_file)
     analyzer.analyze_start_points()  # Prepare data to analyze it
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
 
     # Save the optimized bulges to the CSV file
-    analyzer.generate_csv_from_points()
+    # analyzer.generate_csv_from_points()
 
     return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
 
@@ -1080,25 +1077,34 @@ def three_points_to_bulge(csv_file, output_csv_file):
     return [point.to_coordinates_metadata_dict() for point in points]
 
 
-
 if __name__ == "__main__":
     PATH_INPUT = 1
+    ACTION = 2
 
     try:
-        # root_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(os.path.abspath(__file__))
 
-        # input_csv_file = sys.argv[PATH_INPUT]
-        output_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\output.csv'
-        input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        if len(sys.argv) <= ACTION:
+            raise IndexError("Missing required command-line arguments.")
 
-        # output_csv_file = os.path.join(root_dir, 'output.csv')
+        input_csv_file = sys.argv[PATH_INPUT]
+        output_csv_file = os.path.join(root_dir, 'output.csv')
 
-        points_data = three_points_to_bulge(input_csv_file, output_csv_file)
-        # points_data = extract_start_points_and_correct_corners(input_csv_file, output_csv_file)
+        action_map = {
+            "find_bulges": find_bulges,
+            "points_to_bulge": three_points_to_bulge
+        }
 
-        # res = json.dumps(points_data)
-        # sys.stdout.write(res)
-        # sys.stdout.flush()
+        action = sys.argv[ACTION]
+
+        points_data = action_map[action](input_csv_file, output_csv_file)
+
+        res = json.dumps(points_data)
+
+        sys.stdout.write(res)
+        sys.stdout.flush()
+    except KeyError:
+        raise ValueError(f"Unknown action: {action}")
     except IndexError:
         sys.stderr.write("Error: Missing required command-line arguments.\n")
         sys.stderr.flush()
@@ -1107,5 +1113,3 @@ if __name__ == "__main__":
         sys.stderr.write(f"Error: {e}\n")
         sys.stderr.flush()
         sys.exit(1)
-
-
