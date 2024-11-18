@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 
 # TODO IMPORTANT!!
@@ -17,11 +17,15 @@ import numpy as np
 ######### dynamic threshold gains ######
 K_DISTANCE = 0.3
 K_HEADING = 0.3
-BULGE_THRESHOLD = 0.5
+BULGE_THRESHOLD = 0.025
 ######################################
 
 ###### blocking points gain #####
-K_BLOCKING = 0.3
+K_BLOCKING = 0.7
+MIN_OPERABLE_DASH_LENGTH = 0.2 # m 
+MIN_POINT_DELTA_DISTANCE = 0.1 # m
+MIN_BULGE_POINTS = 10
+MAX_BULGE_POINTS = 20
 ###############################
 
 ##### minimum bulge value ###########
@@ -309,9 +313,7 @@ class PathAnalyzer:
         if abs(bulge) <= MIN_BULGE:
             bulge = 0
 
-        # Set the bulge value in the corresponding points
-        self.points[start_index].bulge = bulge
-        self.points[end_index].bulge = 0
+
 
         return bulge
 
@@ -477,6 +479,11 @@ class PathAnalyzer:
 
                 # Calculate the Euclidean distance between these points
                 current_point.delta_distance = self.calculate_delta_distance(current_point, next_point)
+                
+                                # Skip the point if the delta distance is less than 0.1
+                if current_point.delta_distance < MIN_POINT_DELTA_DISTANCE:
+                    # print(f"Point at index {i} removed due to small delta distance ({current_point.delta_distance:.6f} meters).")
+                    continue
 
                 # Calculate the delta heading between current and next points
                 current_point.delta_heading = self.calculate_delta_heading(
@@ -522,9 +529,12 @@ class PathAnalyzer:
         # Adjust the final index to be within the bounds of the points list.
         final_index = len(self.points) - 1
         # A bulge will have at least 3 points (start index + 2 points).
-        index_counter = 2
+        index_counter = MIN_BULGE_POINTS
         # Limiting the max points based on the total number of points.
         max_points = final_index - start_index
+        
+        if max_points > MAX_BULGE_POINTS:
+            max_points = MAX_BULGE_POINTS
 
         while index_counter <= max_points:  # Keep running until all points are processed.
             end_index = start_index + index_counter
@@ -586,11 +596,13 @@ class PathAnalyzer:
         middle_index = self.find_middle_index(start_index, end_index)
 
         # calculating the bulge based on the start middle and end indexes
-        bulge_value = self.optimize_bulge(start_index, middle_index, end_index)
+        bulge_value = self.calculate_bulge(start_index, middle_index, end_index)
+        
 
-        # Check the goodness of fit for the optimized bulge
-        goodness_of_fit = self.calculate_goodness_of_fit(
-            start_index, end_index, bulge_value)
+
+        # # Check the goodness of fit for the optimized bulge
+        # goodness_of_fit = self.calculate_goodness_of_fit(
+        #     start_index, end_index, bulge_value)
         # print(
         #     f"Goodness of fit for optimized bulge from index {start_index} to {end_index}: {goodness_of_fit:.6f}")
 
@@ -605,6 +617,9 @@ class PathAnalyzer:
         if curve_info:
             start_index, end_index, bulge_value = curve_info
             # print(f"Bulge detected from {start_index} to {end_index} with bulge value {bulge_value:.6f}")
+                    # Set the bulge value in the corresponding points
+            self.points[start_index].bulge = bulge_value
+            self.points[end_index].bulge = 0
             self.processed_points.append(self.points[start_index])
             self.processed_points.append(self.points[end_index])
             self.bulge_end_index = end_index
@@ -635,7 +650,40 @@ class PathAnalyzer:
             start_index = self.process_point(start_index)
 
         self.final_comprasion_input_output()
+        self.enforce_min_operable_dash_length()
         self.adding_stop_points_to_list()
+        
+        
+    def enforce_min_operable_dash_length(self):
+        """
+        Enforce the minimum operable dash length (MIN_OPERABLE_DASH_LENGTH) by recalculating
+        delta distances and removing points after bulges if necessary. Repeat until all bulge points
+        satisfy the minimum dash length condition.
+        """
+        while True:
+            has_short_bulges = False
+
+            # Recalculate delta distances and enforce the minimum operable dash length
+            for i in range(1, len(self.processed_points)):
+                prev_point = self.processed_points[i - 1]
+                current_point = self.processed_points[i]
+
+                delta_distance = self.calculate_delta_distance(prev_point, current_point)
+                current_point.delta_distance = delta_distance
+                current_point.delta_heading = self.calculate_delta_heading(prev_point, current_point)
+
+                # Check if the current point is a bulge and if the delta distance is below the threshold
+                if  delta_distance < MIN_OPERABLE_DASH_LENGTH:
+                    # print(f"Removing point {i} after bulge due to short delta distance ({delta_distance:.6f} meters).")
+                    self.processed_points.pop(i)  # Remove the point after the bulge
+                    has_short_bulges = True
+                    break  # Exit loop to recalculate the delta distances after removing the point
+
+            if not has_short_bulges:
+                # All bulges satisfy the minimum dash length condition
+                break
+
+        # print("Final delta distances and bulge points processed.")
 
     def final_comprasion_input_output(self):
         """
@@ -869,19 +917,19 @@ def find_bulges(csv_file, output_csv_file):
     analyzer.analyze_start_points()  # Prepare data to analyze it
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
     # Save the optimized bulges to the CSV file
-    # analyzer.generate_csv_from_points()
+    analyzer.generate_csv_from_points()
 
     return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
 
 
 if __name__ == "__main__":
-    PATH_INPUT = 1
+    # PATH_INPUT = 1
 
     try:
         root_dir = os.path.dirname(os.path.abspath(__file__))
 
-        input_csv_file = sys.argv[PATH_INPUT]
-        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        # input_csv_file = sys.argv[PATH_INPUT]
+        input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
 
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
