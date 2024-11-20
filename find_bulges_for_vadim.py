@@ -3,7 +3,7 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 # TODO IMPORTANT!!
@@ -1108,8 +1108,7 @@ def find_bulges(csv_file, output_csv_file):
     analyzer.iterate_and_normalize_all_segments()  # Process and find the bulges
 
     # Save the optimized bulges to the CSV file
-    analyzer.generate_csv_from_points()
-
+    # analyzer.generate_csv_from_points() # should be commented out in production
     return [point.to_coordinates_metadata_dict() for point in analyzer.processed_points]
 
 
@@ -1118,7 +1117,8 @@ if __name__ == "__main__":
 
     try:
         root_dir = os.path.dirname(os.path.abspath(__file__))
-        input_csv_file = sys.argv[PATH_INPUT] # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv'
+        input_csv_file = sys.argv[PATH_INPUT]
+        # input_csv_file = 'C:\\Users\\benny\\OneDrive\\Desktop\\code\\input.csv' # for testing only. should be commented out in production
         output_csv_file = os.path.join(root_dir, 'output.csv')
 
         points_data = find_bulges(input_csv_file, output_csv_file)
