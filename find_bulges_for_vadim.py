@@ -6,12 +6,6 @@ import numpy as np
 # import matplotlib.pyplot as plt
 
 
-# TODO IMPORTANT!!
-# there is one bug we need to talk about. right now the algorithm craetes false bulges / lines
-# when one set of points ends and a new one starts  (for example: when there are 2 different non connected lines,
-# when one line ends and the new line starts)
-# i talked with Dani and he tolda me to talk about it with you Vadim because maybe i dont need to fix this
-# because of the way you perform the offset operation.
 
 
 ######### dynamic threshold gains ######
@@ -24,7 +18,7 @@ BULGE_THRESHOLD = 0.025
 K_BLOCKING = 0.7
 MIN_OPERABLE_DASH_LENGTH = 0.2 # m
 MIN_POINT_DELTA_DISTANCE = 0.1 # m
-MIN_BULGE_POINTS = 10
+MIN_BULGE_POINTS = 5
 MAX_BULGE_POINTS = 20
 ###############################
 
@@ -628,7 +622,7 @@ class PathAnalyzer:
 
         # calculating the bulge based on the start middle and end indexes
         bulge_value = self.calculate_bulge(start_index, middle_index, end_index)
-
+        # bulge_value = self.optimize_bulge(start_index, middle_index, end_index)
 
 
         # # Check the goodness of fit for the optimized bulge
